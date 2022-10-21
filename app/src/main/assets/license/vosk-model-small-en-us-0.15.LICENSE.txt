@@ -1,0 +1,8 @@
+This is the AI model that is fed into the Vosk API that is the
+brain behind translating your voice into text locally. Like Vosk API,
+the model is also Apache 2.0. Downloaded from https://alphacephei.com/vosk/models
+
+Notes from the website:
+Lightweight wideband model for Android and RPi
+Word error rate/Speed:
+9.85 (librispeech test-clean) 10.38 (tedlium)

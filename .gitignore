@@ -1,0 +1,25 @@
+.gradle
+.idea
+/local.properties
+local.properties
+/build
+/app/build
+/models/build
+.DS_Store
+*.md5
+*.lst
+*.iml
+app/release
+app/.cxx
+
+# emacs
+*~
+\#*\#
+.\#*
+
+# lua
+# sorry for ignoring this but its simple enough
+# to download and doesn't need to live here
+# if i'm wrong and it's hard to find I apologize
+app/lua-bridge/lua-5.4.4
+
