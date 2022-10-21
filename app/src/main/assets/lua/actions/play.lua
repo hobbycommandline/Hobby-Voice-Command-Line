@@ -9,7 +9,7 @@ require("lua/lib/util")
 did_ok = false
 first = false
 function main()
-    jcall("sendMediaButtonActionCallback", {button=4, callback=broadcastReceiver})
+    jcall("sendMediaButtonActionCallback", {button=4, down=br(false), up=br(true)})
     return "ok"
 end
 
@@ -23,12 +23,15 @@ function launchPlay()
     jcall("quit")
 end
 
-function broadcastReceiver(code, data, intent)
-    if code == -1 then
-        did_ok = true
-    elseif first then
-        first = false
-    else
-        launchPlay()
+function br(up)
+    function broadcastReceiver(code, data, intent)
+        if code == -1 then
+            did_ok = true
+            jcall("quit")
+        elseif first then
+            first = false
+        elseif up then
+            launchPlay()
+        end
     end
 end

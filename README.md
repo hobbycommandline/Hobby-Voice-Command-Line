@@ -8,15 +8,18 @@ After reading the saftey warnings, see the [User Guide](./USER_GUIDE.md) for mor
 
 ## Safety Warnings
 
-The app will be safer once the transition to Lua is complete. Lua does not allow arbitrary Java invocation. This app will still be able to interact with the rest of your phone, which still presents some challenges:
 - when active anyone can control your phone in the same ways you can over voice.
 - Lua can read and write files, this may present some danger
+    - App does not have universal files access as it has user accessible
+		scripts and malicious scripts could be installed.
+- Lua can dispatch arbitrary Intents (communicate with active apps),
+  and start arbitrary applications. I don't know the full breadth of
+	what this entails, but there are intents that request money
+	transfers that I haven't special cased out yet.
 
 ### Why Lua
 
-Slightly safer and easier once already integrated than the original scheme was. I found it unappetizing to develop new features when the app was written in scheme, and I hope this alleviates that reaction.
-
-Huzzah, seems like Lua fully works; just need to enhance communication between Lua and Java by adding Map <-> table conversion to complete the setup. Then in Java, I will need to make Map -> Intent conversion.
+Slightly safer and easier than the original scheme was. I found it unappetizing to develop new features when the app was written in scheme.
 
 ## Guide for Speaking to Hobby / Writing Hobby Actions
 
@@ -25,11 +28,11 @@ Just like linux command lines start with an action like "cat", Hobby commands sh
 For instance "Play music" will be interpreted as:
 
 Action: Play
-Arguments: "Music"
+Arguments: "play", "music"
 
 and will be handled by "lua/actions/play.lua"
 
-Actions are handled this way because it is efficient, quick, and predictable. Some exceptions can be made for filler words such as "Set an Alarm for ten PM" instead of having to say "Alarm ten PM", which would go to set.scm which would then redirect to alarm.scm. Hobby is not intended to interpret every way something can be said, but users can make aliases for common ways they say things to make dealing with Hobby easier.
+Actions are handled this way because it is efficient, quick, and predictable. Some exceptions can be made for filler words such as "Set an Alarm for ten PM" instead of having to say "Alarm ten PM", which would go to set.lua which would then redirect to alarm.lua. Hobby is not intended to interpret every way something can be said, but users can make aliases for common ways they say things to make dealing with Hobby easier.
 
 ## Replacing the system Assisstant
 
@@ -52,7 +55,8 @@ Basically I would like this to do everything I want to speak to my phone about, 
     - "Previous"
     - "Next"
 - [x] Take a note
-    - "Note [note body here]"
+    - "Note [title]"
+		- [body]
     - "Stop" to finish note
     - This also lets you tweet/discord/telegram
     - Unfortunately I had to go through the app picker as no one
@@ -63,19 +67,22 @@ Basically I would like this to do everything I want to speak to my phone about, 
         - [from, to] unfortunately hard to parse because to could be two
 - [ ] Manage Alarms/Timer
     - [X] Timer
+        - Timer [for] [3 hours] [22 minutes] [and] [30 seconds]
+        - Timers have a max of 24 hours
     - [ ] Alarm
     - [ ] "Stop"
-    - Timer [3 hours] [22 minutes] [30 seconds]
-        - Timers have a max of 24 hours
     - "Alarm for (Time) [on (Date)|Daily|Weekly] [named (Name)] [repeat]"
     - "Alarm"
         1. "Please say the alarm time"
 	2. "Do you want this alarm to repeat 'Daily', 'Weekly', or 'Not' ('Activate' to skip)"
 	3. "Alarm name? ('Activate' to skip)"
 - [X] Conversations of more than one line, if the Action needs more clarification, or is taking a note for you.
-- [ ] User Scripts
+- [X] User Scripts
+    - /Android/data/org.hobby.voicecommandline/files/lua
 - [X] Script execution in the background.
 - [ ] Credit screen to thank Vosk / Lua
+    - a "license" action exists, although I would like something more
+		- so that users can have easy access to licensing info
 - [ ] Custom failure behavior
     - If Hobby doesn't understand you, I would like it to be a user preference whether the app will attempt to detect speech again, or simply close. Probably give an option to choose the number of retries.
 - [X] Cancel words / button.
@@ -93,6 +100,17 @@ Most intents are not implemented by this app at the moment, but the list of thin
 ### Music
 
 - https://developer.android.com/guide/topics/media-apps/audio-app/media-controller-test
+    - Unfortunately this requires a really dangerous permission,
+		which enables the app to read general notifications and possibly
+		even interact with the phone during phone calls. I do have
+		the work around actions which work with Music Player GO,
+		but for general purpose use to control the vast majority
+		of apps you would need to enble a dangerous permission.
+		I will mitigate this danger by imposing strict limits on
+		what java methods Lua scripts can call, but I worry
+		there may be some way to abuse this permission via Intents,
+		which I cannot limit.
+		
 - https://developer.android.com/guide/topics/media-apps/interacting-with-assistant
 
 ### Other
@@ -114,4 +132,4 @@ Most intents are not implemented by this app at the moment, but the list of thin
 - The sounds
     - I made them using zynaddsubfx and Ardour
 - All the extra code I wrote is AGPL (GNU AFFERO GENERAL PUBLIC LICENSE Version 3, 19 November 2007) with the caveat that you are not allowed to sell this app you may distribute this app for free in compliance with AGPL on side-loading app stores as is. You may only distribute this app on non-side-loaded app stores like the Android Store if it is for free and under a different name and complies with AGPL.
-- If you are the Dicio project, you may use my code under the same GPL license you use. 
+- If you are the Dicio project, or Music Player GO, you may use my code under the same GPL license you use. 

@@ -93,7 +93,7 @@ class IntentDispatcher {
                         // If the app playing music did not respect the normal API, shut music off.
                         // This means the app won't respond to play/next/prev commands.
                         if (!wasCancelled) {
-                            LuaStatic.say("App did not respect KEYCODE_MEDIA_STOP ACTION_MEDIA_BUTTON, using flawed workaround")
+                            LuaStatic.say("force stop")
                             am.requestAudioFocus(
                                 AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).setAudioAttributes(
                                 AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build()).build())
@@ -101,7 +101,7 @@ class IntentDispatcher {
                     }
                 }
             }
-            sendMediaButtonActionBR(PlaybackStateCompat.ACTION_STOP, br)
+            sendMediaButtonActionBR(PlaybackStateCompat.ACTION_STOP, br, br)
         }
 
         @JvmStatic fun sendFile(name: String?, text: String?, intent: Intent, mimeType: String?, callback: LuaDispatcher.Callback?) {
@@ -116,22 +116,22 @@ class IntentDispatcher {
             sendIntent(intent, callback)
         }
 
-        @JvmStatic fun sendMediaButtonAction(action: Int, callback: LuaDispatcher.Callback?) {
-            sendMediaButtonActionBR((action as Number).toLong(), createBroadcastReceiver(callback))
+        @JvmStatic fun sendMediaButtonAction(action: Int, down_callback: LuaDispatcher.Callback?, up_callback: LuaDispatcher.Callback?) {
+            sendMediaButtonActionBR((action as Number).toLong(), createBroadcastReceiver(down_callback), createBroadcastReceiver(up_callback))
         }
 
-        @JvmStatic fun sendMediaButtonAction(action: Long, callback: LuaDispatcher.Callback?) {
-            sendMediaButtonActionBR(action, createBroadcastReceiver(callback))
+        @JvmStatic fun sendMediaButtonAction(action: Long, down_callback: LuaDispatcher.Callback?, up_callback: LuaDispatcher.Callback?) {
+            sendMediaButtonActionBR(action, createBroadcastReceiver(down_callback), createBroadcastReceiver(up_callback))
         }
 
-        private fun sendMediaButtonActionBR(action: Long, broadcastReceiver: BroadcastReceiver?) {
+        private fun sendMediaButtonActionBR(action: Long, broadcastReceiverDown: BroadcastReceiver?, broadcastReceiverUp: BroadcastReceiver?) {
             val context = MainActivity.context!!
             val keyCode = PlaybackStateCompat.toKeyCode(action)
             val intent = Intent(Intent.ACTION_MEDIA_BUTTON)
             intent.putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
-            context.sendOrderedBroadcast(intent, null, broadcastReceiver, null, 0, null, null)
+            context.sendOrderedBroadcast(intent, null, broadcastReceiverDown, null, 0, null, null)
             intent.putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(KeyEvent.ACTION_UP, keyCode))
-            context.sendOrderedBroadcast(intent, null, broadcastReceiver, null, 0, null, null)
+            context.sendOrderedBroadcast(intent, null, broadcastReceiverUp, null, 0, null, null)
         }
     }
 }

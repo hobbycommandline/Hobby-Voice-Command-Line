@@ -47,9 +47,7 @@ function main(arguments)
         query = table.concat(extra_args, " ")
     end
     extras["android.intent.extra.focus"] = focus
-    if query ~= nil then
-        extras["query"] = query
-    end
+    extras["query"] = query or ""
     intent.extras = extras
     startActivity(intent)
     jcall("quit")

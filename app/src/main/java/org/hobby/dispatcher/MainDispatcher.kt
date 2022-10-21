@@ -64,10 +64,6 @@ class MainDispatcher internal constructor() {
             }
         }
 
-        if (firstWord == "stop") {
-            unmuteBackground()
-        }
-
         /*
          * New action from firstWord
          */

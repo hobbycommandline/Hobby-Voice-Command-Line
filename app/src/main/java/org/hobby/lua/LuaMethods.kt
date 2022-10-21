@@ -4,7 +4,7 @@ import androidx.annotation.Keep
 import org.hobby.activity.MainActivity
 import org.hobby.dispatcher.IntentDispatcher
 import org.hobby.dispatcher.LuaDispatcher
-import java.lang.IllegalStateException
+import org.hobby.dispatcher.MainDispatcher
 import java.util.logging.Logger
 
 @Keep
@@ -49,6 +49,11 @@ class LuaMethods() {
         if (!MainActivity.watchingForWakeWord) {
             LuaStatic.doQuitApp.postValue(true)
         }
+        return true
+    }
+
+    fun unmuteBackground(unused1: LuaDispatcher, unused2: Any?): Boolean {
+        MainDispatcher.dispatcher.unmuteBackground()
         return true
     }
 
@@ -115,9 +120,10 @@ class LuaMethods() {
         (argument as? Map<String, Object>)?.let {
             map->
             val button = map["button"] as? java.lang.Integer
-            val callback = map["callback"] as? LuaDispatcher.Callback
+            val down_callback = map["down"] as? LuaDispatcher.Callback
+            val up_callback = map["up"] as? LuaDispatcher.Callback
             if (button != null) {
-                IntentDispatcher.sendMediaButtonAction(button.toInt(), callback)
+                IntentDispatcher.sendMediaButtonAction(button.toInt(), down_callback, up_callback)
             }
         }
         return true
