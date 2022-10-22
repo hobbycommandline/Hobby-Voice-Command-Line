@@ -42,10 +42,6 @@ This will stop your music.
 
 - We first ask nicely, then force the app to stop if it didn't comply.
 - Hobby will close automatically after this action is complete.
-- Better complete control is available if I program it, but
-it would require a dangerous permission you really should
-never grant to an app, so this workaround will stick around
-if you don't enable said permission
 
 ## Resume current media
 
@@ -53,10 +49,7 @@ Say
 
     Play
 
-- We can only ask nicely to play music, if the app refuses, we can't do anything about it. Music Player GO respects this command.
-- Launches the music player if no app responds to our play request.
-- Like stop, better control is possible if we accept a dangerous
-permission.
+- resumes playback of last played media
 - Hobby quits on complete
 
 ## Skip to next song
@@ -65,8 +58,7 @@ Say
 
     Next
 
-- We can only ask nicely, if the app refuses, we can't do anything about it. Music Player GO respects this command.
-- Better control if we use more dangerous permissions
+- Plays next media
 - Hobby quits on complete
 
 ## Skip to previous song
@@ -75,8 +67,7 @@ Say
 
     Previous
 
-- We can only ask nicely, if the app refuses, we can't do anything about it. Music Player GO respects this command.
-- Better control if we use more dangerous permissions
+- Plays previous media
 - Hobby quits on complete
 
 ## Launch a music player from search

@@ -70,11 +70,9 @@ class IntentDispatcher {
         @JvmStatic fun sendMediaButtonAction(action: Long) {
             val context = MainActivity.context!!
             val keyCode = PlaybackStateCompat.toKeyCode(action)
-            val intent = Intent(Intent.ACTION_MEDIA_BUTTON)
-            intent.putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
-            context.sendOrderedBroadcast(intent, null)
-            intent.putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(KeyEvent.ACTION_UP, keyCode))
-            context.sendOrderedBroadcast(intent, null)
+            val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+            am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
         }
 
         @JvmStatic fun stopMusic() {
