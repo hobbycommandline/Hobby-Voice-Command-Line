@@ -18,14 +18,16 @@ package org.hobby.activity
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.bluetooth.BluetoothAdapter
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
-import android.os.Build
-import android.os.Bundle
-import android.os.Environment
+import android.os.*
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.view.View
@@ -47,7 +49,6 @@ import org.hobby.chat.ChatRecyclerView
 import org.hobby.database.AppDatabase
 import org.hobby.dispatcher.LuaDispatcher
 import org.hobby.dispatcher.MainDispatcher
-import org.hobby.lua.LuaHelpers
 import org.hobby.lua.LuaStatic
 import org.json.JSONException
 import org.json.JSONObject
@@ -97,6 +98,7 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
      * stream and we might try to execute feedback from an action
      */
     private var isSpeaking = false
+    private var speakingCount = 0
 
     /**
      * whether we're playing audio for an alert sound like the 'now listening'
@@ -183,17 +185,22 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
                 override fun onStart(utteranceId: String?) {
                     ++numActive
                     isSpeaking = true
-                    setSpeechPaused(true)
+                    stopListening(null)
                 }
 
                 override fun onDone(utteranceId: String?) {
                     --numActive
+                    --speakingCount
+
+                    if (speakingCount < 0) {
+                        speakingCount = 0
+                    }
                     if (numActive < 0) {
                         numActive = 0
                     }
                     if (numActive == 0) {
                         isSpeaking = false
-                        setSpeechPaused(null)
+                        listenIfNeeded()
                     }
 
                 }
@@ -341,6 +348,11 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
     public override fun onDestroy() {
         super.onDestroy()
         synchronized(lifecycleRegistryLock) {
+            if (handler != null) {
+                handler!!.removeCallbacks(connectBluetoothRunnable)
+            }
+            handler = null
+            shutDownBluetoothMic()
             MainDispatcher.dispatcher.unmuteBackground()
             if (textToSpeech == null) {
                 textToSpeech!!.stop()
@@ -412,14 +424,14 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
             }
             val pauseButton = findViewById<ToggleButton>(R.id.pause)
 
+            stopListening(false)
             backgroundExecutor.execute {
                 val continueRunning = runBlocking {
                     MainDispatcher.dispatcher.dispatch(text)
                 }
                 runOnUiThread {
-                    if (continueRunning && speechService != null) {
-                        lastState = STATE_DONE
-                        setUiState(STATE_MIC)
+                    if (continueRunning) {
+                        registerIntentToListen()
                     } else if (watchingForWakeWord) {
                         isAwake = false
                         MainDispatcher.dispatcher.unmuteBackground()
@@ -433,6 +445,39 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
             }
         } catch (e: JSONException) {
         }
+    }
+
+    private fun stopListening(wantToListen: Boolean?) {
+        IllegalStateException("fuck").printStackTrace()
+        if (wantToListen != null) {
+            intentToListen = wantToListen
+        }
+        if (speechService != null) {
+            shutDownMic()
+        }
+        probablyListening = false
+    }
+
+    private fun registerIntentToListen() {
+        intentToListen = true
+        listenIfNeeded()
+    }
+
+    private fun listenIfNeeded() {
+        if (canListen() && intentToListen && !probablyListening) {
+            if (speechService == null) {
+                recognizeMicrophone()
+                probablyListening = true
+            } else {
+                if (setSpeechPaused(false)) {
+                    probablyListening = true
+                }
+            }
+        }
+    }
+
+    private fun canListen(): Boolean {
+        return !isSpeaking && !isBeeping && !isDucked && speakingCount == 0
     }
 
     override fun onPartialResult(hypothesis: String) {
@@ -479,16 +524,17 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
                 (findViewById<View>(R.id.recognize_mic) as Button).setText(R.string.recognize_microphone)
                 findViewById<View>(R.id.recognize_mic).isEnabled = true
                 pauseButton.isEnabled = false
-                recognizeMicrophone()
+                playSound(R.raw.start_sound) {
+                    setUiState(STATE_MIC)
+                }
+
             }
             STATE_DONE -> {
                 (findViewById<View>(R.id.recognize_mic) as Button).setText(R.string.recognize_microphone)
                 findViewById<View>(R.id.recognize_mic).isEnabled = true
                 pauseButton.isEnabled = false
-                playSound(R.raw.end_sound, null)
             }
             STATE_MIC -> {
-                isBeeping = true
                 (findViewById<View>(R.id.recognize_mic) as Button).setText(R.string.stop_microphone)
                 if (canReplaceLast) {
                     replaceLast(getString(R.string.say_something), false)
@@ -499,10 +545,7 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
                 findViewById<View>(R.id.recognize_mic).isEnabled = true
                 pauseButton.isEnabled = true
                 pauseButton.isChecked = false
-                playSound(R.raw.start_sound) {
-                    setSpeechPaused(null)
-                }
-
+                registerIntentToListen()
             }
             else -> throw IllegalStateException("Unexpected value: $state")
         }
@@ -516,9 +559,12 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
     }
 
     private fun ttsSay(message: String) {
+        ++speakingCount
         val map = HashMap<String, String>()
         map[TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID] = (++utteranceId).toString();
         textToSpeech!!.speak(message, TextToSpeech.QUEUE_ADD, map)
+        isSpeaking = true
+        stopListening(null)
     }
 
     private fun replaceLast(message: String, speak: Boolean) {
@@ -554,23 +600,99 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
         addItem(message, speak)
     }
 
-    private fun recognizeMicrophone() {
+    private fun connectBluetooth() {
+        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+
+        registerReceiver(object : BroadcastReceiver() {
+            var firstDisconnect = true
+
+            override fun onReceive(context: Context?, intent: Intent) {
+                val state: Int = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1)
+                val initMic = if (state == AudioManager.SCO_AUDIO_STATE_CONNECTED) {
+                    isBluetoothMicRecording = true
+                    true
+                } else if (state == AudioManager.SCO_AUDIO_STATE_ERROR) {
+                    audioManager.stopBluetoothSco()
+                    isBluetoothMicRecording = false
+                    true
+                } else if (state == AudioManager.SCO_AUDIO_STATE_DISCONNECTED) {
+                    if (firstDisconnect) {
+                        firstDisconnect = false
+                        false
+                    } else {
+                        audioManager.stopBluetoothSco()
+                        isBluetoothMicRecording = false
+                        true
+                    }
+                } else {
+                    false
+                }
+                if (initMic) {
+                    unregisterReceiver(this)
+                    initSpeechService()
+                }
+            }
+        }, IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED))
+
+        audioManager.startBluetoothSco()
+    }
+
+    private fun isBluetoothOn(): Boolean {
+        // is ON
+        // also the docs say this will continue to work forever
+        // its just discouraged
+        val bluetoothAdapter: BluetoothAdapter = BluetoothAdapter
+            .getDefaultAdapter()
+        if(!bluetoothAdapter.isEnabled()) {
+            return false
+        }
+        return true
+    }
+    private fun shutDownBluetoothMic() {
+        if (isBluetoothMicRecording) {
+            val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+            audioManager.stopBluetoothSco()
+            isBluetoothMicRecording = false
+        }
+    }
+    private fun shutDownMic() {
+        setUiState(STATE_DONE)
+        shutDownBluetoothMic()
         if (speechService != null) {
-            setUiState(STATE_DONE)
             speechService!!.stop()
             speechService!!.shutdown()
             speechService = null
+        }
+    }
+    private val connectBluetoothRunnable = {
+        connectBluetooth()
+    }
+    var handler: Handler? = null
+    private fun recognizeMicrophone() {
+        if (handler == null) {
+            handler = Handler(Looper.getMainLooper())
+        }
+        if (speechService != null) {
+            shutDownMic()
             MainDispatcher.dispatcher.unmuteBackground()
         } else {
-            try {
-                MainDispatcher.dispatcher.muteBackground(this)
-                val rec = Recognizer(model, 16000.0f)
-                speechService = SpeechService(rec, 16000.0f)
-                speechService!!.startListening(this)
-                setUiState(STATE_MIC)
-            } catch (e: IOException) {
-                setErrorState(e.message!!)
+            if (isBluetoothOn()) {
+                handler!!.removeCallbacks(connectBluetoothRunnable)
+                handler!!.postDelayed(connectBluetoothRunnable, 1000)
+            } else {
+                initSpeechService()
             }
+        }
+    }
+
+    private fun initSpeechService() {
+        try {
+            MainDispatcher.dispatcher.muteBackground(this)
+            val rec = Recognizer(model, 16000.0f)
+            speechService = SpeechService(rec, 16000.0f)
+            speechService!!.startListening(this)
+        } catch (e: IOException) {
+            setErrorState(e.message!!)
         }
     }
 
@@ -578,6 +700,7 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
         MainDispatcher.dispatcher.muteBackground(this)
         if (final) {
             playSound(R.raw.start_sound, null)
+            registerIntentToListen()
         }
     }
 
@@ -610,15 +733,17 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
             }
         } else {
             MainDispatcher.dispatcher.muteBackground(this)
+            listenIfNeeded()
         }
     }
 
-    private fun setSpeechPaused(shouldPause: Boolean?) {
+    private fun setSpeechPaused(shouldPause: Boolean?): Boolean {
         val actuallyChecked = isPaused
         val needToPause = actuallyChecked || isSpeaking
         val wantToPause = isBeeping || isDucked || (shouldPause ?: false)
         val doPause = (wantToPause && !watchingForWakeWord) || needToPause
         speechService?.setPause(doPause)
+        return speechService != null && !doPause
     }
 
     private fun playSound(_id: Int, callback: (() -> Unit)?) {
@@ -645,11 +770,16 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
         if (mp != null) {
             mp.setOnCompletionListener {
                 isBeeping = false
+                listenIfNeeded()
                 if (callback != null) {
                     callback()
                 }
             }
             mp.start()
+            stopListening(null)
+        } else {
+            isBeeping = false
+            listenIfNeeded()
         }
     }
 
@@ -667,6 +797,9 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
         private const val STATE_DONE = 2
         private const val STATE_MIC = 3
 
+        var intentToListen: Boolean = false
+        var probablyListening: Boolean = false
+        var isBluetoothMicRecording: Boolean = true
         var isAwake: Boolean = true
         var hasSeenWakeWord: Boolean = false
         var watchingForWakeWord: Boolean = false
@@ -697,6 +830,7 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
                     isAwake = true
                 }
                 setSpeechPaused(null)
+                listenIfNeeded()
                 if (shouldStartAudio) {
                     mediaPlayer?.start()
                 }
@@ -709,6 +843,7 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
                     MainDispatcher.dispatcher.lostFocus()
                     isAwake = false
                 }
+                stopListening(null)
                 pause()
                 if (mediaPlayer?.isPlaying == true) {
                     mediaPlayer?.pause()
@@ -722,6 +857,7 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
                     isDucked = true
                     isAwake = false
                 }
+                stopListening(null)
                 if (mediaPlayer?.isPlaying == true) {
                     mediaPlayer?.pause()
                     setSpeechPaused(true)
@@ -735,6 +871,7 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
                     isDucked = true
                     isAwake = false
                 }
+                stopListening(null)
                 if (mediaPlayer?.isPlaying == true) {
                     mediaPlayer?.pause()
                     setSpeechPaused(true)
