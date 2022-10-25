@@ -23,7 +23,7 @@ android {
         minSdkVersion 26
         targetSdkVersion 30
         versionCode 3
-        versionName "0.5.8"
+        versionName "0.5.9"
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64', 'x86'
         }
@@ -41,6 +41,10 @@ android {
             // prevent me from turning minify on
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix ".debug"
         }
     }
     compileOptions {

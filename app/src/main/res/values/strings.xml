@@ -2,6 +2,7 @@
 <resources>
 
     <string name="app_name">Hobby AI</string>
+    <string name="app_name_short">Hobby AI</string>
     <string name="recognize_file">Recognize File</string>
     <string name="recognize_microphone">Recognize Microphone</string>
     <string name="stop_microphone">Stop Microphone</string>
