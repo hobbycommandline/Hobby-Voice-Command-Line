@@ -38,7 +38,7 @@ class LuaHelpers {
                 floatExtras?.forEach{
                         entry ->
                     when(entry.value?.javaClass) {
-                        Double.javaClass ->
+                        Double::class.java ->
                             intent.putExtra(entry.key, (entry.value as? Double)?.toFloat())
                     }
                 }
@@ -70,7 +70,7 @@ class LuaHelpers {
                 val keys = extras.keySet()
                 keys.forEach {
                     key ->
-                    extrasMap[key] = extras.get(key)
+                    extrasMap[key] = extras.getString(key)
                 }
             }
 
