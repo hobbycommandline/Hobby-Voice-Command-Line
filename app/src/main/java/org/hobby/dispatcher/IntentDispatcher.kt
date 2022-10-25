@@ -12,6 +12,7 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.view.KeyEvent
 import androidx.annotation.Keep
 import org.hobby.activity.MainActivity
+import org.hobby.luabridge.LuaDispatcher
 import org.hobby.lua.LuaHelpers
 import org.hobby.lua.LuaStatic
 import java.io.File

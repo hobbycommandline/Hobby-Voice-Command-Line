@@ -3,13 +3,13 @@ package org.hobby.lua
 import androidx.annotation.Keep
 import org.hobby.activity.MainActivity
 import org.hobby.dispatcher.IntentDispatcher
-import org.hobby.dispatcher.LuaDispatcher
+import org.hobby.luabridge.LuaDispatcher
 import org.hobby.dispatcher.MainDispatcher
 import java.util.logging.Logger
 
 @Keep
-class LuaMethods() {
-    fun call(lua: LuaDispatcher, functionName: String, argument: Any?): Any?{
+class LuaMethods(): org.hobby.luabridge.LuaMethods {
+    override fun call(lua: LuaDispatcher, functionName: String, argument: Any?): Any?{
         try {
             return LuaMethods::class.java
                 .getMethod(functionName, LuaDispatcher::class.java, Object::class.java)

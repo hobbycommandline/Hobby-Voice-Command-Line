@@ -2,7 +2,7 @@ package org.hobby.lua
 
 import android.content.Intent
 import androidx.annotation.Keep
-import org.hobby.dispatcher.LuaDispatcher
+import org.hobby.luabridge.LuaDispatcher
 import java.util.*
 
 

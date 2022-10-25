@@ -47,8 +47,8 @@ import androidx.room.Room
 import kotlinx.coroutines.runBlocking
 import org.hobby.chat.ChatRecyclerView
 import org.hobby.database.AppDatabase
-import org.hobby.dispatcher.LuaDispatcher
 import org.hobby.dispatcher.MainDispatcher
+import org.hobby.files.AssetVersionControl
 import org.hobby.lua.LuaStatic
 import org.hobby.state.SpeakingState
 import org.json.JSONException
@@ -147,8 +147,8 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
 
             // Window setup
             context = applicationContext
-            System.loadLibrary("lua-bridge")
-            LuaDispatcher.copyAllResourcesToFiles()
+
+            AssetVersionControl.copyAllResourcesToFiles()
             val externalFilesDir = getExternalFilesDir(null as String?)
             if (externalFilesDir == null) {
                 val exception: Exception =
@@ -156,7 +156,7 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
                 setErrorState("Failed to unpack the model" + exception.message)
                 return
             }
-            LuaDispatcher.setup(externalFilesDir.absolutePath)
+
 
             /*LuaDispatcher("lua/hello-world.lua")?.let{
             lua ->

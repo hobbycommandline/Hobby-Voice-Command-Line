@@ -408,11 +408,11 @@ void setup(JNIEnv* env, jstring files_path) {
 	env->ReleaseStringUTFChars(files_path, jni_bridge_files_path);
 	jni_bridge_files_path = jni_bridge::files_path->c_str();
 
-	jobject local = env->FindClass("org/hobby/dispatcher/LuaDispatcher");
+	jobject local = env->FindClass("org/hobby/luabridge/LuaDispatcher");
 	jni_bridge::LuaDispatcher = (jclass)env->NewGlobalRef(local);
 	env->DeleteLocalRef(local);
 
-	local = env->FindClass("org/hobby/dispatcher/LuaDispatcher$Callback");
+	local = env->FindClass("org/hobby/luabridge/LuaDispatcher$Callback");
 	jni_bridge::Callback = (jclass)env->NewGlobalRef(local);
 	env->DeleteLocalRef(local);
 
@@ -495,7 +495,7 @@ void setup(JNIEnv* env, jstring files_path) {
 	jni_bridge::new_integer = env->GetMethodID(jni_bridge::Integer, "<init>", "(I)V");
 
 	jni_bridge::new_callback = env->GetMethodID(jni_bridge::Callback, "<init>",
-																							"(Lorg/hobby/dispatcher/LuaDispatcher;I)V");
+																							"(Lorg/hobby/luabridge/LuaDispatcher;I)V");
 	jni_bridge::j_call = env->GetMethodID(jni_bridge::LuaDispatcher, "execJvm",
 	                                      "(Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/Object;");
 
@@ -504,14 +504,14 @@ void setup(JNIEnv* env, jstring files_path) {
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_org_hobby_dispatcher_LuaDispatcher_setup(
+Java_org_hobby_luabridge_LuaDispatcher_setup(
 																							JNIEnv* env,
 																							jclass LuaDispatcher, jstring files_path) {
 	setup(env, files_path);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_org_hobby_dispatcher_LuaDispatcher_runScript(
+Java_org_hobby_luabridge_LuaDispatcher_runScript(
 																									JNIEnv* env,
 																									jclass LuaDispatcher, jstring jscript) {
 	if (jscript == NULL) {
@@ -533,7 +533,7 @@ Java_org_hobby_dispatcher_LuaDispatcher_runScript(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_org_hobby_dispatcher_LuaDispatcher_destroyLuaInstance(
+Java_org_hobby_luabridge_LuaDispatcher_destroyLuaInstance(
 																													 JNIEnv* env,
 																													 jclass LuaDispatcher, jint scriptId) {
 	if (scriptId >= LUA_INSTANCES.size()) {
@@ -551,7 +551,7 @@ Java_org_hobby_dispatcher_LuaDispatcher_destroyLuaInstance(
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-Java_org_hobby_dispatcher_LuaDispatcher_executeCallback(
+Java_org_hobby_luabridge_LuaDispatcher_executeCallback(
 																												JNIEnv* env,
 																												jobject dispatcher, jint scriptId, jint callbackId, jobjectArray arguments) {
 	if(auto instance = get_instance(scriptId)){
@@ -561,7 +561,7 @@ Java_org_hobby_dispatcher_LuaDispatcher_executeCallback(
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-Java_org_hobby_dispatcher_LuaDispatcher_executeFunction(
+Java_org_hobby_luabridge_LuaDispatcher_executeFunction(
 																												JNIEnv* env,
 																												jobject dispatcher, jint scriptId, jstring functionName, jobjectArray arguments) {
 	if(auto instance = get_instance(scriptId)){
@@ -571,7 +571,7 @@ Java_org_hobby_dispatcher_LuaDispatcher_executeFunction(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_org_hobby_dispatcher_LuaDispatcher_destroyCallback(
+Java_org_hobby_luabridge_LuaDispatcher_destroyCallback(
 																												JNIEnv* env,
 																												jclass LuaDispatcher, jint scriptId, jint callback_id) {
 	if(auto instance = get_instance(scriptId)){

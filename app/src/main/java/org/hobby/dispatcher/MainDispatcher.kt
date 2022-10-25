@@ -8,7 +8,9 @@ import androidx.annotation.Keep
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.hobby.activity.MainActivity
+import org.hobby.luabridge.LuaDispatcher
 import org.hobby.lua.LuaHelpers
+import org.hobby.lua.LuaMethods
 import org.hobby.lua.LuaStatic
 
 @Keep
@@ -74,7 +76,7 @@ class MainDispatcher internal constructor() {
             if (!LuaDispatcher.filePath(scriptName).toFile().exists()) {
                 LuaStatic.say("> ${firstWord} not found")
             } else {
-                val lua = LuaDispatcher(scriptName)
+                val lua = LuaDispatcher(scriptName, LuaMethods())
                 val result = lua.callFunction("main", arrayOf(schemeArguments.toTypedArray()))
                 LuaStatic.say("> $result")
                 found = true

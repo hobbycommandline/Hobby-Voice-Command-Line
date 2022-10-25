@@ -52,15 +52,10 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
     ndkVersion "25.1.8937393"
-    externalNativeBuild {
-        cmake {
-            version "3.22.1"
-            path file('lua-bridge/CMakeLists.txt')
-        }
-    }
 }
 
 dependencies {
+    implementation project(path: ':LuaBridge')
     def room_version = "2.4.2"
     implementation 'com.google.devtools.ksp:symbol-processing-api:1.6.10-1.0.2'
     implementation "androidx.room:room-runtime:$room_version"
