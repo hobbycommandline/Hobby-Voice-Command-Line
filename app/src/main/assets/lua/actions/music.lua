@@ -31,7 +31,7 @@ function main(arguments)
     if args.album ~= nil then
         focus = "vnd.android.cursor.item/album"
         query = table.concat(args.album, " ")
-        extras["android.intent.extra.album"] = album
+        extras["android.intent.extra.album"] = query
     end
     if args.title ~= nil then
         focus = "vnd.android.cursor.item/audio"
