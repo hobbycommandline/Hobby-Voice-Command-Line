@@ -62,23 +62,23 @@ class LuaHelpers {
             return Pair(intent, callback)
         }
 
-        fun intentToMap(intent: Intent): Map<String, Object?> {
-            val map = HashMap<String, Object?>()
-            val extrasMap = HashMap<String, Object?>()
+        fun intentToMap(intent: Intent): Map<String, Any?> {
+            val map = HashMap<String, Any?>()
+            val extrasMap = HashMap<String, Any?>()
             val extras = intent.extras
             if (extras != null) {
                 val keys = extras.keySet()
                 keys.forEach {
                     key ->
-                    extrasMap[key] = extras.get(key) as? Object
+                    extrasMap[key] = extras.get(key)
                 }
             }
 
 
-            map["action"] = intent.action as? Object
-            map["extras"] = extrasMap as? Object
-            map["type"] = intent.type as? Object
-            map["categories"] = (intent.categories as? Set<String>)?.toTypedArray() as? Object
+            map["action"] = intent.action as? Any
+            map["extras"] = extrasMap as? Any
+            map["type"] = intent.type as? Any
+            map["categories"] = (intent.categories as? Set<String>)?.toTypedArray() as? Any
             return map
         }
 
