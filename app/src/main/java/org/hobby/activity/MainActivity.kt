@@ -431,7 +431,6 @@ class MainActivity : Activity(), RecognitionListener, LifecycleOwner, AudioManag
                         speakingState.startSleeping()
                         MainDispatcher.dispatcher.unmuteBackground()
                     } else {
-                        pauseButton.isChecked = true
                         speakingState.stoppedListening(false)
                     }
                 }

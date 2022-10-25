@@ -53,7 +53,7 @@ class SpeakingState(private val turnOnMic: ()->Boolean, private val playMicOnSou
             speakingCount = 0
         }
         if (speakingCount == 0) {
-            playSoundThenEnableMic()
+            playSoundThatMicWillTurnOnIfNeeded()
         }
     }
 
