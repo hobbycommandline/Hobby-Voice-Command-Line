@@ -100,16 +100,7 @@ Most intents are not implemented by this app at the moment, but the list of thin
 ### Music
 
 - https://developer.android.com/guide/topics/media-apps/audio-app/media-controller-test
-    - Unfortunately this requires a really dangerous permission,
-		which enables the app to read general notifications and possibly
-		even interact with the phone during phone calls. I do have
-		the work around actions which work with Music Player GO,
-		but for general purpose use to control the vast majority
-		of apps you would need to enble a dangerous permission.
-		I will mitigate this danger by imposing strict limits on
-		what java methods Lua scripts can call, but I worry
-		there may be some way to abuse this permission via Intents,
-		which I cannot limit.
+    - Some apps are only controllable with this, but it seems most won't require the dangerous permission this controller uses.
 		
 - https://developer.android.com/guide/topics/media-apps/interacting-with-assistant
 
