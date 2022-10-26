@@ -31,6 +31,8 @@ class LuaHelpers {
                             intent.putExtra(entry.key, entry.value as? Float)
                         java.lang.Double::class.java ->
                             intent.putExtra(entry.key, entry.value as? Double)
+                        HashMap::class.java ->
+                            intent.putExtra(entry.key, mapToIntent(entry.value))
                     }
                 }
                 // since lua uses doubles, we need to be able to specifically target float
@@ -40,6 +42,15 @@ class LuaHelpers {
                     when(entry.value?.javaClass) {
                         Double::class.java ->
                             intent.putExtra(entry.key, (entry.value as? Double)?.toFloat())
+                    }
+                }
+                // since lua uses Longs, we need to be able to specifically target int
+                val intExtras = map["intExtras"] as? Map<String, Any?>
+                intExtras?.forEach{
+                        entry ->
+                    when(entry.value?.javaClass) {
+                        java.lang.Long::class.java ->
+                            intent.putExtra(entry.key, (entry.value as? Long)?.toInt())
                     }
                 }
 
@@ -70,7 +81,8 @@ class LuaHelpers {
                 val keys = extras.keySet()
                 keys.forEach {
                     key ->
-                    extrasMap[key] = extras.getString(key)
+                    // reminder not to fix this; get preserves underlying type
+                    extrasMap[key] = extras.get(key)
                 }
             }
 

@@ -110,7 +110,7 @@ class LuaMethods(): org.hobby.luabridge.LuaMethods {
     }
 
     fun sendMediaButtonAction(unused1: LuaDispatcher, argument: Any?): Boolean {
-        (argument as? Int)?.let {
+        (argument as? Long)?.let {
             IntentDispatcher.sendMediaButtonAction(it)
         }
         return true
@@ -155,6 +155,14 @@ class LuaMethods(): org.hobby.luabridge.LuaMethods {
     fun clearSpeechCallback(unused1: LuaDispatcher, argument: Any?): Boolean {
         LuaHelpers.clearSpeechCallback()
         return true
+    }
+
+    fun observeMusicState(unused1: LuaDispatcher, argument: Any?): Boolean {
+        (argument as? LuaDispatcher.Callback)?.let { callback ->
+            IntentDispatcher.observeMusic(callback)
+            return true
+        }
+        return false
     }
 
     companion object {

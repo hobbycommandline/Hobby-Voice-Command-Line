@@ -4,17 +4,21 @@ import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.media.session.PlaybackState
 import android.net.Uri
+import android.os.Bundle
+import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.view.KeyEvent
 import androidx.annotation.Keep
 import org.hobby.activity.MainActivity
-import org.hobby.luabridge.LuaDispatcher
 import org.hobby.lua.LuaHelpers
 import org.hobby.lua.LuaStatic
+import org.hobby.luabridge.LuaDispatcher
 import java.io.File
 import java.util.logging.Logger
 
@@ -51,6 +55,19 @@ class IntentDispatcher {
             }
         }
 
+        @JvmStatic fun observeMusic(callback: LuaDispatcher.Callback) {
+            val filter = IntentFilter()
+            filter.addAction("com.android.music.metachanged")
+            val br: BroadcastReceiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) {
+                    context.unregisterReceiver(this)
+                    callback.call(arrayOf(LuaHelpers.intentToMap(intent)))
+                }
+            }
+            MainActivity.context!!.registerReceiver(br, filter)
+
+        }
+
         @JvmStatic fun startActivity(intent: Intent) {
             startActivity(intent, true)
         }
@@ -62,10 +79,6 @@ class IntentDispatcher {
             if (quit) {
                 LuaStatic.quitApp()
             }
-        }
-
-        @JvmStatic fun sendMediaButtonAction(action: Int) {
-            sendMediaButtonAction(action.toLong())
         }
 
         @JvmStatic fun sendMediaButtonAction(action: Long) {
