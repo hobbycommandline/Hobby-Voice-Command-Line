@@ -1,0 +1,3 @@
+[submodule "LuaBridge"]
+	path = LuaBridge
+	url = https://github.com/hobbycommandline/LuaBridge.git

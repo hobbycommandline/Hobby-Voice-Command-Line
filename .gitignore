@@ -16,10 +16,3 @@ app/.cxx
 *~
 \#*\#
 .\#*
-
-# lua
-# sorry for ignoring this but its simple enough
-# to download and doesn't need to live here
-# if i'm wrong and it's hard to find I apologize
-app/lua-bridge/lua-5.4.4
-

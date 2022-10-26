@@ -1,4 +1,4 @@
-package org.hobby.dispatcher
+package org.hobby.files
 
 import androidx.annotation.Keep
 import org.hobby.activity.BuildConfig
@@ -22,76 +22,9 @@ import kotlin.io.path.Path
  * Better than manual reference counting I think.
  */
 @Keep
-class LuaDispatcher(id: Int) {
-
-    private var id: Int = id
-
-    /**
-     * A callback you can use to execute Lua code.
-     * Accepts an array of arguments of any type.
-     *
-     * You should delete references to unused callbacks
-     * as it will keep the Lua instance loaded while
-     * references exist
-     */
-    @Keep
-    class Callback(lua: LuaDispatcher, callbackId: Int) {
-        private var lua: LuaDispatcher = lua
-        private var callbackId = callbackId
-        /**
-         * Calls this callback in lua.
-         *
-         * please use as? casting, as errors may change the type to `String?`
-         */
-        fun call(arguments: Array<Any?>) {
-            lua.executeCallback(lua.id, callbackId, arguments)
-        }
-
-        protected fun finalize() {
-            destroyCallback(lua.id, callbackId);
-        }
-    }
-
-    constructor(scriptPath: String) : this(runScript(filePath(scriptPath).toString())) {
-    }
-
-    /**
-     * Calls the specified function in lua.
-     *
-     * please use as? casting, as errors may change the type to `String?`
-     */
-    @Synchronized
-    fun callFunction(functionName: String, arguments: Array<Any?>): Any? {
-        return executeFunction(id, functionName, arguments)
-    }
-
-    /**
-     * Already in the Synchronized context
-     *
-     * please to not cause race conditions
-     */
-    fun execJvm(functionName: String, argument: Any?): Any? {
-        return LuaMethods().call(this, functionName, argument);
-    }
-
-    protected fun finalize() {
-        destroyLuaInstance(id)
-    }
-
-    // not static: needs access to this object in case it returns a Callback
-    @Synchronized
-    private external fun executeFunction(scriptId: Int, functionName: String, arguments: Array<Any?>): Object?
-    // not static: needs access to this object in case it returns a Callback
-    @Synchronized
-    private external fun executeCallback(scriptId: Int, callbackId: Int, arguments: Array<Any?>): Object?
-
+class AssetVersionControl {
     companion object {
-        val LOG = Logger.getLogger("LuaDispatcher")
-
-        @JvmStatic external fun setup(baseFilePath: String)
-        @JvmStatic private external fun runScript(script: String): Int
-        @JvmStatic private external fun destroyLuaInstance(scriptId: Int)
-        @JvmStatic private external fun destroyCallback(scriptId: Int, callbackId: Int)
+        private val LOG = Logger.getLogger("Files")
 
         // totally doable in c++ to do lua dual read from files/ and assets/
         // but i don't want to. Only will do so if bundled lua gets large

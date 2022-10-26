@@ -6,7 +6,7 @@ import androidx.annotation.Keep;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.MutableLiveData;
 
-import org.hobby.dispatcher.LuaDispatcher;
+import org.hobby.luabridge.LuaDispatcher;
 
 import java.util.List;
 import java.util.logging.Logger;
