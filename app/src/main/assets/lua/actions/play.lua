@@ -2,7 +2,7 @@
   ;; play -> resume current audio
 ]]
 function main()
-    jcall("sendMediaButtonAction", 4)
+    jcall("sendMediaButtonKeyCode", 126)
     jcall("quit")
     return "ok"
 end

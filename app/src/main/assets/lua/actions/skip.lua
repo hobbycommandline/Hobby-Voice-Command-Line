@@ -23,9 +23,9 @@ function main(arguments)
     end
     local key = 0
     if forward then
-        key = 64
+        key = 272
     elseif backward then
-        key = 8
+        key = 273
     end
     if key == 0 then
         return "specify forward or backward"
@@ -39,21 +39,27 @@ function main(arguments)
 end
 
 function time_skip(length, direction)
+    local key = 0
+    if direction then
+        key = 272
+    else
+        key = 273
+    end
+
     if direction ~= true then
         length = -length
     end
-    local br = function(intent)
-        if not (intent.extras and type(intent.extras.position) == "number") then
-            say("Could not find media position")
-        else
-            local new_pos = length + intent.extras.position
-            if new_pos < 0 then
-                new_pos = 0
-            end
-            setMediaTime(new_pos)
-        end
-    end
-    jcall("observeMusicState", br)
+    local intent = {
+    action = "android.intent.action.MEDIA_BUTTON",
+    extras = {
+    ["DURATION_MILLIS"] = 1000 * length,
+    }
+    }
+    local args = {
+    button=key,
+    intent=intent
+    }
+    jcall("sendMediaButtonKeyCodeCallback", args)
     return "ok"
 end
 

@@ -2,17 +2,17 @@ package org.hobby.dispatcher
 
 import android.app.Activity
 import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.Context
+import android.content.ComponentName
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
-import android.media.session.PlaybackState
 import android.net.Uri
 import android.os.Bundle
-import android.support.v4.media.session.MediaSessionCompat
-import android.support.v4.media.session.PlaybackStateCompat
 import android.view.KeyEvent
 import androidx.annotation.Keep
 import org.hobby.activity.MainActivity
@@ -38,17 +38,42 @@ class IntentDispatcher {
             context!!.sendOrderedBroadcast(intent, null, br, null, initialCode, null, null)
         }
 
-        @JvmStatic fun createBroadcastReceiver(callback: LuaDispatcher.Callback?): BroadcastReceiver? {
+        @JvmStatic fun sendIntentImplicit(intent: Intent, callback: LuaDispatcher.Callback?) {
+            val context = MainActivity.context!!
+            val br = createFakeBroadcastReceiver(callback)
+            // If we receive this back, the Intent has not been handled or it has been cancelled.
+            sendImplicitBroadcast(context, intent, br)
+        }
+
+        @JvmStatic fun createBroadcastReceiver(callback: LuaDispatcher.Callback?): CountedBroadcastReceiver? {
             return if (callback == null) {
                 null
             } else {
-                object : BroadcastReceiver() {
+                object : CountedBroadcastReceiver() {
                     override fun onReceive(c: Context, intent: Intent) {
+                        activeBroadcasts -= 1
                         // do not simplify this guard statement, you will regret it
                         if (callback == null) {
                             return
                         }
-                        val arguments: Array<Any?> = arrayOf(resultCode, resultData, LuaHelpers.intentToMap(intent))
+                        val arguments: Array<Any?> = arrayOf(activeBroadcasts, resultCode, resultData, LuaHelpers.intentToMap(intent))
+                        callback.call(arguments)
+                    }
+                }
+            }
+        }
+
+        @JvmStatic fun createFakeBroadcastReceiver(callback: LuaDispatcher.Callback?): FakeCountedBroadcastReceiver? {
+            return if (callback == null) {
+                null
+            } else {
+                object : FakeCountedBroadcastReceiver() {
+                    override fun onReceive(c: Context, intent: Intent, resultCode: Int, resultData: String?, resultBundle: Bundle?) {
+                        // do not simplify this guard statement, you will regret it
+                        if (callback == null) {
+                            return
+                        }
+                        val arguments: Array<Any?> = arrayOf(resultCode, resultData, LuaHelpers.bundleToMap(resultBundle))
                         callback.call(arguments)
                     }
                 }
@@ -81,31 +106,36 @@ class IntentDispatcher {
             }
         }
 
-        @JvmStatic fun sendMediaButtonAction(action: Long) {
+        @JvmStatic fun sendMediaButtonKeyCode(keyCode: Long) {
             val context = MainActivity.context!!
-            val keyCode = PlaybackStateCompat.toKeyCode(action)
             val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
-            am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+            am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode.toInt()))
+            am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode.toInt()))
         }
 
         @JvmStatic fun stopMusic() {
-            val br = object: BroadcastReceiver() {
+            val am = MainActivity.context!!.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            am.requestAudioFocus(
+                AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).setAudioAttributes(
+                    AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build()).build())
+            return
+
+            val br = object: FakeCountedBroadcastReceiver() {
                 private var wasCancelled: Boolean = false
-                override fun onReceive(c:Context, i:Intent){
+                override fun onReceive(c:Context, i:Intent, resultCode: Int, resultData: String?, resultBundle: Bundle?){
                     val event: KeyEvent =
                         i.getParcelableExtra(Intent.EXTRA_KEY_EVENT) as KeyEvent? ?: return
-                    clearAbortBroadcast()
+                    // abortBroadcast does nothing, we don't receive it
+                    // always cleared by the system before we get here
                     if (resultCode == Activity.RESULT_OK) {
-                        LOG.warning("Was cancelled $resultCode")
                         wasCancelled = true
                     }
                     if (event.action == KeyEvent.ACTION_UP) {
-                        val am = c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
                         // If the app playing music did not respect the normal API, shut music off.
                         // This means the app won't respond to play/next/prev commands.
                         if (!wasCancelled) {
                             LuaStatic.say("force stop")
+                            val am = c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
                             am.requestAudioFocus(
                                 AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).setAudioAttributes(
                                 AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build()).build())
@@ -113,7 +143,7 @@ class IntentDispatcher {
                     }
                 }
             }
-            sendMediaButtonActionBR(PlaybackStateCompat.ACTION_STOP, br, br)
+            sendMediaButtonKeyCodeBR(KeyEvent.KEYCODE_MEDIA_STOP.toLong(), null, br, br)
         }
 
         @JvmStatic fun sendFile(name: String?, text: String?, intent: Intent, mimeType: String?, callback: LuaDispatcher.Callback?) {
@@ -128,22 +158,81 @@ class IntentDispatcher {
             sendIntent(intent, callback)
         }
 
-        @JvmStatic fun sendMediaButtonAction(action: Int, down_callback: LuaDispatcher.Callback?, up_callback: LuaDispatcher.Callback?) {
-            sendMediaButtonActionBR((action as Number).toLong(), createBroadcastReceiver(down_callback), createBroadcastReceiver(up_callback))
+        @JvmStatic fun sendMediaButtonKeyCode(keyCode: Long, intent: Intent?, down_callback: LuaDispatcher.Callback?, up_callback: LuaDispatcher.Callback?) {
+            sendMediaButtonKeyCodeBR(keyCode, intent, createFakeBroadcastReceiver(down_callback), createFakeBroadcastReceiver(up_callback))
         }
 
-        @JvmStatic fun sendMediaButtonAction(action: Long, down_callback: LuaDispatcher.Callback?, up_callback: LuaDispatcher.Callback?) {
-            sendMediaButtonActionBR(action, createBroadcastReceiver(down_callback), createBroadcastReceiver(up_callback))
-        }
-
-        private fun sendMediaButtonActionBR(action: Long, broadcastReceiverDown: BroadcastReceiver?, broadcastReceiverUp: BroadcastReceiver?) {
+        private fun sendMediaButtonKeyCodeBR(
+            keyCode: Long,
+            baseIntent: Intent?,
+            broadcastReceiverDown: FakeCountedBroadcastReceiver?,
+            broadcastReceiverUp: FakeCountedBroadcastReceiver?) {
             val context = MainActivity.context!!
-            val keyCode = PlaybackStateCompat.toKeyCode(action)
-            val intent = Intent(Intent.ACTION_MEDIA_BUTTON)
-            intent.putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
-            context.sendOrderedBroadcast(intent, null, broadcastReceiverDown, null, 0, null, null)
-            intent.putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(KeyEvent.ACTION_UP, keyCode))
-            context.sendOrderedBroadcast(intent, null, broadcastReceiverUp, null, 0, null, null)
+            val intentDown = if (baseIntent != null) {
+                Intent(baseIntent)
+            } else {
+                Intent(Intent.ACTION_MEDIA_BUTTON)
+            }
+            val intentUp = Intent(intentDown)
+            intentDown.addFlags(Intent.FLAG_EXCLUDE_STOPPED_PACKAGES)
+            intentUp.addFlags(Intent.FLAG_EXCLUDE_STOPPED_PACKAGES)
+            intentDown.putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(KeyEvent.ACTION_DOWN,
+                keyCode.toInt()
+            ))
+            sendImplicitBroadcast(context, intentDown, broadcastReceiverDown)
+            intentUp.putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(KeyEvent.ACTION_UP, keyCode.toInt()))
+            sendImplicitBroadcast(context, intentUp, broadcastReceiverUp)
+        }
+
+        private fun sendImplicitBroadcast(
+            context: Context, intent: Intent, cr: FakeCountedBroadcastReceiver?) {
+            val pm: PackageManager = context.packageManager
+            val matches: List<ResolveInfo> = pm.queryBroadcastReceivers(intent, 0)
+            if (matches.isEmpty()) {
+                return
+            }
+            val cns = matches.map {
+                ComponentName(
+                it.activityInfo.applicationInfo.packageName,
+                it.activityInfo.name)
+            }
+            val orderedDispatcherBR = object: CountedBroadcastReceiver() {
+
+                override fun onReceive(c:Context, i:Intent){
+                    activeBroadcasts--
+                    val resultBundle = getResultExtras(false)
+                    if (resultCode == Activity.RESULT_CANCELED
+                        && resultData == null
+                        && resultBundle == null
+                        && activeBroadcasts > 0) {
+                        val intentWithComponentName = Intent(intent)
+                        intentWithComponentName.component = cns[cns.size - activeBroadcasts]
+                        context.sendOrderedBroadcast(
+                            intentWithComponentName,
+                            null,
+                            this,
+                            null,
+                            resultCode,
+                            null,
+                            null
+                            )
+                    } else {
+                        cr?.onReceive(context, intent, resultCode, resultData, getResultExtras(false))
+                    }
+                }
+            }
+            orderedDispatcherBR.setOrderedHint(true)
+            orderedDispatcherBR.activeBroadcasts = matches.size
+            val intentWithComponentName = Intent(intent)
+            intentWithComponentName.component = cns.first()
+            context.sendOrderedBroadcast(
+                intentWithComponentName,
+                null,
+                orderedDispatcherBR,
+                null,
+                Activity.RESULT_CANCELED,
+                null,
+                null)
         }
     }
 }

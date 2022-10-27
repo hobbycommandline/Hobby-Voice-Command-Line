@@ -1,6 +1,7 @@
 package org.hobby.lua
 
 import android.content.Intent
+import android.os.Bundle
 import androidx.annotation.Keep
 import org.hobby.luabridge.LuaDispatcher
 import java.util.*
@@ -9,30 +10,32 @@ import java.util.*
 @Keep
 class LuaHelpers {
     companion object {
-        fun mapToIntent(map: Any?): Pair<Intent, LuaDispatcher.Callback?> {
-            val intent = Intent()
+        fun mapToIntent(map: Any?): Pair<Intent?, LuaDispatcher.Callback?> {
+            var intent: Intent? = null
             var callback: LuaDispatcher.Callback? = null
             (map as? Map<String,Any?>)?.let {
                     map ->
-                intent.action = map["action"] as? String
+                val innerIntent = Intent()
+                intent = innerIntent
+                innerIntent.action = map["action"] as? String
                 val extras = map["extras"] as? Map<String, Any?>
                 extras?.forEach{
                         entry ->
                     when(entry.value?.javaClass) {
                         java.lang.Boolean::class.java ->
-                            intent.putExtra(entry.key, entry.value as? Boolean)
+                            innerIntent.putExtra(entry.key, entry.value as? Boolean)
                         java.lang.String::class.java ->
-                            intent.putExtra(entry.key, entry.value as? String)
+                            innerIntent.putExtra(entry.key, entry.value as? String)
                         java.lang.Integer::class.java ->
-                            intent.putExtra(entry.key, entry.value as? Int)
+                            innerIntent.putExtra(entry.key, entry.value as? Int)
                         java.lang.Long::class.java ->
-                            intent.putExtra(entry.key, entry.value as? Long)
+                            innerIntent.putExtra(entry.key, entry.value as? Long)
                         java.lang.Float::class.java ->
-                            intent.putExtra(entry.key, entry.value as? Float)
+                            innerIntent.putExtra(entry.key, entry.value as? Float)
                         java.lang.Double::class.java ->
-                            intent.putExtra(entry.key, entry.value as? Double)
+                            innerIntent.putExtra(entry.key, entry.value as? Double)
                         HashMap::class.java ->
-                            intent.putExtra(entry.key, mapToIntent(entry.value))
+                            innerIntent.putExtra(entry.key, mapToIntent(entry.value))
                     }
                 }
                 // since lua uses doubles, we need to be able to specifically target float
@@ -41,7 +44,7 @@ class LuaHelpers {
                         entry ->
                     when(entry.value?.javaClass) {
                         Double::class.java ->
-                            intent.putExtra(entry.key, (entry.value as? Double)?.toFloat())
+                            innerIntent.putExtra(entry.key, (entry.value as? Double)?.toFloat())
                     }
                 }
                 // since lua uses Longs, we need to be able to specifically target int
@@ -50,12 +53,12 @@ class LuaHelpers {
                         entry ->
                     when(entry.value?.javaClass) {
                         java.lang.Long::class.java ->
-                            intent.putExtra(entry.key, (entry.value as? Long)?.toInt())
+                            innerIntent.putExtra(entry.key, (entry.value as? Long)?.toInt())
                     }
                 }
 
                 (map["type"] as? String)?.let{
-                    intent.type = it
+                    innerIntent.type = it
                 }
 
                 (map["categories"] as? Array<*>)?.let{
@@ -63,7 +66,7 @@ class LuaHelpers {
                     categories.forEach {
                         (it as? String)?.let{
                             category ->
-                            intent.addCategory(category)
+                            innerIntent.addCategory(category)
                         }
                     }
                 }
@@ -71,6 +74,20 @@ class LuaHelpers {
             }
 
             return Pair(intent, callback)
+        }
+
+        fun bundleToMap(bundle: Bundle?): HashMap<String, Any?>? {
+            if (bundle == null) {
+                return null
+            }
+            val map = HashMap<String, Any?>()
+            val keys = bundle.keySet()
+            keys.forEach {
+                    key ->
+                // reminder not to fix this; get preserves underlying type
+                map[key] = bundle.get(key)
+            }
+            return map
         }
 
         fun intentToMap(intent: Intent): Map<String, Any?> {

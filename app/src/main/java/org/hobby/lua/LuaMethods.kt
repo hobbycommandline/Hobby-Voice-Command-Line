@@ -88,8 +88,23 @@ class LuaMethods(): org.hobby.luabridge.LuaMethods {
      */
     fun sendIntent(unused1: LuaDispatcher, argument: Any?): Boolean {
         val (intent, callback) = LuaHelpers.mapToIntent(argument)
-        LuaStatic.lastIntent = intent;
-        IntentDispatcher.sendIntent(intent, callback)
+        if (intent != null) {
+            LuaStatic.lastIntent = intent;
+            IntentDispatcher.sendIntent(intent, callback)
+        }
+        return true
+    }
+
+    /**
+     * Dispatch intent in the old implicit style, but emulated
+     * via explicit intents (query must be in AndroidManifest.xml)
+     */
+    fun sendIntentImplicit(unused1: LuaDispatcher, argument: Any?): Boolean {
+        val (intent, callback) = LuaHelpers.mapToIntent(argument)
+        if (intent != null) {
+            LuaStatic.lastIntent = intent;
+            IntentDispatcher.sendIntentImplicit(intent, callback)
+        }
         return true
     }
 
@@ -99,8 +114,10 @@ class LuaMethods(): org.hobby.luabridge.LuaMethods {
     fun startActivity(unused1: LuaDispatcher, argument: Any?): kotlin.Boolean {
         // callback not accepted by startActivity in java
         val (intent, _) = LuaHelpers.mapToIntent(argument)
-        LuaStatic.lastIntent = intent;
-        IntentDispatcher.startActivity(intent, false)
+        if (intent != null) {
+            LuaStatic.lastIntent = intent;
+            IntentDispatcher.startActivity(intent, false)
+        }
         return true;
     }
 
@@ -109,21 +126,22 @@ class LuaMethods(): org.hobby.luabridge.LuaMethods {
         return true
     }
 
-    fun sendMediaButtonAction(unused1: LuaDispatcher, argument: Any?): Boolean {
+    fun sendMediaButtonKeyCode(unused1: LuaDispatcher, argument: Any?): Boolean {
         (argument as? Long)?.let {
-            IntentDispatcher.sendMediaButtonAction(it)
+            IntentDispatcher.sendMediaButtonKeyCode(it)
         }
         return true
     }
 
-    fun sendMediaButtonActionCallback(unused1: LuaDispatcher, argument: Any?): Boolean {
-        (argument as? Map<String, Object>)?.let {
+    fun sendMediaButtonKeyCodeCallback(unused1: LuaDispatcher, argument: Any?): Boolean {
+        (argument as? Map<String, Any?>)?.let {
             map->
-            val button = map["button"] as? java.lang.Integer
+            val button = map["button"] as? Long
+            val intent = LuaHelpers.mapToIntent(map["intent"] as? HashMap<*, *>).first
             val down_callback = map["down"] as? LuaDispatcher.Callback
             val up_callback = map["up"] as? LuaDispatcher.Callback
             if (button != null) {
-                IntentDispatcher.sendMediaButtonAction(button.toInt(), down_callback, up_callback)
+                IntentDispatcher.sendMediaButtonKeyCode(button, intent, down_callback, up_callback)
             }
         }
         return true
@@ -134,9 +152,11 @@ class LuaMethods(): org.hobby.luabridge.LuaMethods {
             arguments ->
             val name = arguments["name"] as? String
             val text = arguments["text"] as? String
-            val (intent, callback) = LuaHelpers.mapToIntent(arguments["intent"])
-            val mimeType = arguments["mimeType"] as? String
-            IntentDispatcher.sendFile(name, text, intent, mimeType, callback)
+                val (intent, callback) = LuaHelpers.mapToIntent(arguments["intent"])
+            if (intent != null) {
+                val mimeType = arguments["mimeType"] as? String
+                IntentDispatcher.sendFile(name, text, intent, mimeType, callback)
+            }
         }
         return true
     }

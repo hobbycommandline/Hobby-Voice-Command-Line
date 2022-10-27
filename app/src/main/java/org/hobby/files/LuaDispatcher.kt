@@ -48,7 +48,7 @@ class AssetVersionControl {
         fun copyAllResourcesToFiles() {
             val versionName = "version.txt"
             val updateRequired = BuildConfig.VERSION_NAME != readFile(versionName)
-            if (BuildConfig.DEBUG || updateRequired) {
+            if (updateRequired) {
                 if (!updateRequired && BuildConfig.DEBUG) {
                     LOG.severe("Copying initial files due to DEBUG flag");
                 }

@@ -1,7 +1,7 @@
 -- skip to next song
 function main()
     jcall("unmuteBackground")
-    jcall("sendMediaButtonAction", 32)
+    jcall("sendMediaButtonKeyCode", 87)
     jcall("quit")
     return "ok"
 end
